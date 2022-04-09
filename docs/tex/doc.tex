@@ -1,0 +1,255 @@
+\documentclass[utf8x, 14pt, bold, times]{G7-32} % Стиль (по умолчанию будет 14pt)
+
+\include{preamble}
+\include{listings}
+
+\begin{document}
+
+\frontmatter % выключает нумерацию ВСЕГО; здесь начинаются ненумерованные главы: реферат, введение, глоссарий, сокращения и прочее.
+
+\include{info}
+\include{mytitle}
+\maketitle
+
+\newpage
+\tableofcontents
+
+\nobreakingbeforechapters
+%\breakingbeforechapters
+
+\newpage
+\Introduction
+
+\textbf{Цель работы:}
+\begin{itemize}
+\item ознакомиться с симметричными алгоритмами блочного шифрования на
+      примере AES;
+\item изучить особенности алгоритма AES.
+\end{itemize}
+
+\textbf{Задание на работу:}
+\begin{itemize}
+\item разработать алгоритм шифрования/расшифровывания AES;
+\item убедиться в правильности составления алгоритмов, а затем на языке
+      программирования составить программу, которая реализует данный алгоритм;
+\item на ряде контрольных примеров (не менее 10) открытого текста проверить
+      правильность работы алгоритмов шифрования и дешифрования;
+\item оценить криптостойкость алгоритма AES, а также производительность,
+      разработанной программы;
+\item разработанная программа должна содержать графический интерфейс пользователя.
+\end{itemize}
+
+\mainmatter % это включает нумерацию глав и секций в документе ниже
+\newpage
+
+\chapter{Описание алгоритма}
+
+\section{Алгоритм генерации раундовых ключей}
+
+Псевдокод алгоритма приведен ниже:\\
+
+\begin{lstlisting}[style=pseudocode]
+keyExpansion(byte key[4*Nk], word w[Nb*(Nr+1)], Nk)
+begin
+    word temp
+    i = 0;
+    
+    while(i < Nk)
+        w[i] = word(key[4*i], key[4*i+1], key[4*i+2], key[4*i+3])
+        i = i + 1
+    end while
+    
+    i = Nk
+
+    while(i < Nb*(Nr+1))
+        temp = w[i-1]
+        if (i mod Nk = 0)
+            temp = SubWord(RotWord(temp)) xor Rcon[i/Nk]
+        else if (Nk > 6 and i mod Nk = 4)
+            temp = SubWord(temp)
+        end if
+        w[i] = w[i-Nk] xor temp
+        i = i + 1
+    end while
+end
+\end{lstlisting}
+
+\begin{itemize}
+\item rotWord()~---~функция, которая берёт четырёхбайтовое слово и производит
+      над ним циклическую перестановку вида:
+      $$
+      \operatorname{rotWord}(
+      \begin{bmatrix} 
+        b_{0} & b_{1} & b_{2} & b_{3}
+      \end{bmatrix}
+      ) 
+        =
+      \begin{bmatrix}
+        b_{1} & b_{2} & b_{3} & b_{0}
+      \end{bmatrix}
+      $$
+\item subWord()~---~функция, которая берёт четырёхбайтовое слово и заменяет
+      каждый байт на соответствующий ему из константной таблицы \textsl{sbox}:
+      $$
+      \operatorname{subWord}(
+      \begin{bmatrix}
+        b_{0} & b_{1} & b_{2} &b_{3}
+      \end{bmatrix}
+      )
+        =
+      \begin{bmatrix}
+        \operatorname{S}(b_{0}) & \operatorname{S}(b_{1}) & \operatorname{S}(b_{2}) & \operatorname{S}(b_{3})
+      \end{bmatrix}
+      $$
+\end{itemize}
+
+\section{Алгоритм шифрования}
+
+Псевдокод алгоритма приведен ниже:\\
+
+\begin{lstlisting}[style=pseudocode]
+cipher(byte in[4*Nb], byte out[4*Nb], word w[Nb*(Nr+1)])
+begin
+    byte state[4,Nb]
+    
+    state := in
+
+    addRoundKey(state, w[0, Nb-1])
+    for round = 1 step 1 to Nr-1
+        subBytes(state)
+        shiftRows(state)
+        mixColumns(state)
+        addRoundKey(state, w[Nb*round, Nb*(round+1) - 1])
+    end for
+    subBytes(state)
+    shiftRows(state)
+    addRoundKey(state, w[Nr*Nb, Nb*(Nr+1) - 1])
+
+    out := state
+end
+\end{lstlisting}
+
+\begin{itemize}
+\item subBytes()~---~процедура, которая заменяет каждый байт из \textsl{state} на
+      соответствующий ему из константной таблицы \textsl{sbox};
+\item shiftRows()~---~процедура, которая циклически сдвигает строки state на r байт
+      по горизонтали в зависимости от номера строки. Для нулевой строки r = 0, для
+      первой -- r = 1 и т. д.
+\item mixColumns()~---~процедура, которая смешивает четыре байта каждой колонки
+      \textsl{state}, используя для этого обратимую линейную трансформацию:
+      $$
+      \begin{bmatrix}
+        b_{0,j} \\
+        b_{1,j} \\
+        b_{2,j} \\
+        b_{3,j}
+      \end{bmatrix}
+        =
+      \begin{bmatrix}
+        2 & 3 & 1 & 1 \\
+        1 & 2 & 3 & 1 \\
+        1 & 1 & 2 & 3 \\
+        3 & 1 & 1 & 2
+      \end{bmatrix}
+      \begin{bmatrix}
+        a_{0,j} \\
+        a_{1,j} \\
+        a_{2,j} \\
+        a_{3,j}
+     \end{bmatrix}
+     \qquad 0\leq j\leq 3
+     $$
+\item addRoundKey()~---~ процедура, которая производит побитовый xor каждого
+      байта \textsl{state} с каждым байтом \textsl{roundKey}. 
+\end{itemize}
+
+\section{Алгоритм расшифрования}
+
+Псевдокод алгоритма приведен ниже:\\
+
+\begin{lstlisting}[style=pseudocode]
+invCipher(byte in[4*Nb], byte out[4*Nb], word w[Nb*(Nr+1)])
+begin
+    byte state[4, Nb]
+    
+    state := in
+
+    addRoundKey(state, w[Nr*Nb, Nb*(Nr+1) - 1])
+    for round = Nr-1 step -1 downto 1
+        invShiftRows(state)
+        invSubBytes(state)
+        addRoundKey(state, w[Nb*round, Nb*(round+1) - 1])
+        invMixColumns(state)
+    end for
+    invShiftRows(state)
+    invSubBytes(state)
+    addRoundKey(state, w[0, Nb-1])
+
+    out := state
+end
+\end{lstlisting}
+
+\begin{itemize}
+\item invShiftRows()~---~процедура, которая является обратной к shiftRows();
+\item invSubBytes()~---~процедура, которая является обратной к subBytes();
+\item invMixColumns()~---~процедура, которая является обратной к mixColumns(). 
+\end{itemize}
+
+\chapter{Оценка алгоритма}
+
+В июне 2003 года Агентство национальной безопасности США постановило, что шифр AES
+является достаточно надёжным, чтобы использовать его для защиты сведений, составляющих
+государственную тайну.
+
+\chapter{Примеры работы программы}
+
+\section{Пример 1}
+
+\input{test-data-1}
+
+\section{Пример 2}
+
+\input{test-data-2}
+
+\section{Пример 3}
+
+\input{test-data-3}
+
+\section{Пример 4}
+
+\input{test-data-4}
+
+\section{Пример 5}
+
+\input{test-data-5}
+
+\chapter{Исходный код}
+
+\section{aes256.hpp}
+
+\inputminted[fontsize=\footnotesize, breaklines]{cpp}{../../src/aes256.hpp}
+
+\section{aes256.cpp}
+
+\inputminted[fontsize=\footnotesize, breaklines]{cpp}{../../src/aes256.cpp}
+
+\section{mainwindow.hpp}
+
+\inputminted[fontsize=\footnotesize, breaklines]{cpp}{../../src/mainwindow.hpp}
+
+\section{mainwindow.cpp}
+
+\inputminted[fontsize=\footnotesize, breaklines]{cpp}{../../src/mainwindow.cpp}
+
+\section{main.cpp}
+
+\inputminted[fontsize=\footnotesize, breaklines]{cpp}{../../src/main.cpp}
+
+\backmatter %% Здесь заканчивается нумерованная часть документа и начинаются ссылки и
+
+\newpage
+\Conclusion
+
+В ходе работы изучил симметричный алгоритм блочного шифрования AES.
+
+\end{document}

@@ -1,0 +1,25 @@
+\renewcommand*{\maketitle}{
+\begin{titlepage}
+    \thispagestyle{empty}
+    \begin{center}
+        \university \\
+        \faculty \\
+		\department \\[6cm]
+
+        \textbf{\docname \num} \\
+		\topic \\
+        \variant \\[5.1cm]
+
+        \vfill
+        \setlength\extrarowheight{-2pt}
+        \begin{tabular*}{\textwidth}{@{\extracolsep{\fill}} lcl}
+            \normalsize{Преподаватель:} & \underline{\hspace{3cm}} & \normalsize{\tutorname} \\
+                          & {\small подпись, дата} & \\
+            \normalsize{Студент:}~\normalsize{\group,~\gradebook}   & \underline{\hspace{3cm}} & \normalsize{\studentname} \\
+                          & {\small подпись, дата} & \\
+        \end{tabular*}
+        \vfill
+		\city~\the\year
+	\end{center}
+\end{titlepage}
+}
